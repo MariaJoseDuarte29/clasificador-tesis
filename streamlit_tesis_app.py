@@ -146,5 +146,4 @@ if st.button("🚀 Ejecutar clasificación") and archivo_excel and objetivos_tex
 # Imagen de marca personal al final
 st.markdown("---")
 st.image("logo_autora.png", caption="Desarrollado por María José Duarte Torres", use_container_width=True)
- use_container_width=True)
 
