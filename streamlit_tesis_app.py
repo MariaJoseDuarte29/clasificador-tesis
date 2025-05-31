@@ -134,7 +134,7 @@ if st.button("📊 Generar tabla de clasificación"):
         st.success("✅ Clasificación generada con éxito.")
         st.download_button("📥 Descargar archivo clasificado", data=output.getvalue(), file_name="contenido_tesis_clasificado.xlsx")
 
-        st.image("https://i.imgur.com/GXh7oNh.png", caption="Ejemplo de clasificación generada", use_column_width=True)
+        st.image("ejemplo_resultado.png", caption="Ejemplo de clasificación generada", use_column_width=True)
 
     except Exception as e:
         st.error(f"Ocurrió un error inesperado: {e}")
