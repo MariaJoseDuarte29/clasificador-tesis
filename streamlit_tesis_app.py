@@ -52,9 +52,9 @@ if st.button("📊 Analizar y clasificar"):
             repetidos = df["Capítulo o título"].duplicated(keep=False)
 
             # Decisiones
-            df["¿Relaciona un objetivo?"] = ["Sí" if s > 0.45 else "No" for s in sims_obj]
-            df["¿Es clave para entender metodología/resultados?"] = ["Sí" if s > 0.45 else "No" for s in sims_met]
-            df["¿Aporta al marco teórico?"] = ["Sí" if s > 0.45 else "No" for s in sims_marco]
+            df["¿Relaciona un objetivo?"] = ["Sí" if s > 0.3 else "No" for s in sims_obj]
+            df["¿Es clave para entender metodología/resultados?"] = ["Sí" if s > 0.3 else "No" for s in sims_met]
+            df["¿Aporta al marco teórico?"] = ["Sí" if s > 0.3 else "No" for s in sims_marco]
             df["¿Se repite en otro capítulo?"] = ["Sí" if r else "No" for r in repetidos]
 
             # Clasificación final
