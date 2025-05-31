@@ -116,16 +116,21 @@ if st.button("🚀 Ejecutar clasificación") and archivo_excel and objetivos_tex
             salida = io.BytesIO()
             with pd.ExcelWriter(salida, engine="openpyxl") as writer:
                 df_final.to_excel(writer, index=False, sheet_name="Clasificado")
-                ws = writer.book.active
+                workbook = writer.book
+                ws = workbook.active
                 verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
                 rojo = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 
-                for row in ws.iter_rows(min_row=2, min_col=2, max_col=6):
-                    for cell in row:
-                        if cell.value == "Sí":
-                            cell.fill = verde
-                        elif cell.value == "No":
-                            cell.fill = rojo
+                try:
+                    for row in ws.iter_rows(min_row=2, min_col=2, max_col=6):
+                        for cell in row:
+                            if isinstance(cell.value, str):
+                                if cell.value.strip() == "Sí":
+                                    cell.fill = verde
+                                elif cell.value.strip() == "No":
+                                    cell.fill = rojo
+                except Exception as e:
+                    st.warning(f"No se pudo aplicar colores: {e}")
 
             st.success("🌟 Clasificación completada")
             st.download_button(
@@ -136,9 +141,10 @@ if st.button("🚀 Ejecutar clasificación") and archivo_excel and objetivos_tex
             )
 
     except Exception as e:
-        st.error(f"Ocurrió un error: {e}")
+        st.error(f"Ocurrió un error inesperado: {e}")
 
 # Imagen de marca personal al final
 st.markdown("---")
 st.image("logo_autora.png", caption="Desarrollado por María José Duarte Torres", use_container_width=True)
+ use_container_width=True)
 
