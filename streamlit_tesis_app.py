@@ -68,9 +68,9 @@ if uploaded_file and objetivo and metodologia and marco:
 
     df["Capítulo o título"] = df["Capítulo o título"].astype(str)
 
-    df["¿Relaciona un objetivo?"] = df["Capítulo o título"].apply(lambda x: "Sí" if obtener_similitud(x, objetivo) > 0.3 else "No")
-    df["¿Es clave para entender metodología/resultados?"] = df["Capítulo o título"].apply(lambda x: "Sí" if obtener_similitud(x, metodologia) > 0.3 else "No")
-    df["¿Aporta al marco teórico?"] = df["Capítulo o título"].apply(lambda x: "Sí" if obtener_similitud(x, marco) > 0.3 else "No")
+    df["¿Relaciona un objetivo?"] = df["Capítulo o título"].apply(lambda x: "Sí" if obtener_similitud(x, objetivo) > 0.25 else "No")
+    df["¿Es clave para entender metodología/resultados?"] = df["Capítulo o título"].apply(lambda x: "Sí" if obtener_similitud(x, metodologia) > 0.25 else "No")
+    df["¿Aporta al marco teórico?"] = df["Capítulo o título"].apply(lambda x: "Sí" if obtener_similitud(x, marco) > 0.25 else "No")
 
     df["¿Se repite en otro capítulo?"] = df["Capítulo o título"].duplicated(keep=False).map({True: "Sí", False: "No"})
 
