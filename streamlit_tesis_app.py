@@ -7,10 +7,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill
 
 # 🌎 Título e introducción
-titulo = "Clasificador de Títulos de Tesis"
+titulo = "Clasificador de Capitulos y subcapitulos de Tesis de investigación"
 st.set_page_config(page_title=titulo, layout="centered")
 st.title(titulo)
-st.subheader("Creado por la arquitecta María José Duarte Torres")
+st.subheader("Arq. María José Duarte Torres 2025")
 
 st.markdown("""
 Esta herramienta permite analizar los títulos o subtítulos de un documento de tesis y clasificarlos automáticamente según su nivel de relevancia. Evalúa si se relacionan con los objetivos, el marco teórico y la metodología, si se repiten en otros capítulos, y si podrían resumirse o eliminarse. Finalmente, se genera una clasificación de A (alta relevancia) a E (baja relevancia) con colores y sugerencias.
