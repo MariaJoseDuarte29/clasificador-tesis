@@ -4,126 +4,141 @@ import torch
 from sentence_transformers import SentenceTransformer, util
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
+import io
 
-# Configurar página
+# Configurar la página con un estilo futurista
 st.set_page_config(
     page_title="Clasificador de Capítulos de Tesis",
-    page_icon="📘",
+    page_icon="🧠",
     layout="centered"
 )
 
-# Cabecera visual
-st.title("📘 Clasificador Inteligente de Capítulos de Tesis")
+st.markdown("""
+<style>
+body {
+    background-color: #0d1117;
+    color: #c9d1d9;
+}
+
+h1, h2, h3 {
+    color: #58a6ff;
+}
+
+.css-18e3th9 {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.title("🧠 Clasificador Inteligente de Capítulos de Tesis")
 st.caption("Creado por la arquitecta María José Duarte Torres")
 
 st.markdown("""
-Este prototipo de aplicación permite analizar de forma automatizada el **contenido de los capítulos de una tesis**
-para determinar su nivel de **relevancia** y relación con los **objetivos**, el **marco teórico** o la **metodología** del proyecto investigativo.
+Este prototipo de aplicación permite analizar automáticamente el **contenido de los capítulos de una tesis**
+para determinar su nivel de **relevancia** y relación con los **objetivos**, el **marco teórico** o la **metodología**.
 
-El sistema aplica un modelo de **inteligencia artificial basado en similitud semántica** para generar etiquetas como:
+La app usa un modelo de **IA semántica** para clasificar cada título según:
+- Si se relaciona con los **objetivos**
+- Si es clave para la **metodología/resultados**
+- Si aporta al **marco teórico**
+- Si se **repite**
+- Si puede **resumirse/eliminarse**
 
-- ✅ Si el contenido está relacionado con los objetivos del proyecto
-- ✅ Si aporta directamente a la metodología o resultados
-- ✅ Si se relaciona con el marco teórico
-- ⚠️ Si se repite en otro capítulo
-- 🗑️ Si puede eliminarse o resumirse
+Cada capítulo recibe una categoría (A–E) y se genera un Excel con colores automáticos. 
 
-Finalmente, el sistema asigna una **categoría de relevancia (A–E)** a cada capítulo, y genera una hoja de Excel de salida con colores y sugerencias automáticas.
+**Recomendaciones para subir tu archivo Excel:**
+- La hoja debe tener una columna llamada exactamente: **"Capítulo o título"** (respetar mayúsculas, minúsculas y acentos).
+- No debe contener filas vacías.
 """)
 
-# Imagen de ejemplo
-st.image("ejemplo_resultado.png", caption="Ejemplo de archivo clasificado exportado por la app", use_column_width=True)
+st.image("ejemplo_resultado.png", caption="Ejemplo de archivo clasificado exportado por la app", use_container_width=True)
 
 st.markdown("---")
 
-# Cargar archivos
-st.header("📂 Subir archivos")
+st.header("✍️ Escribe tus textos base")
+objetivos_texto = st.text_area("Pega aquí el texto de los objetivos")
+metodologia_texto = st.text_area("Pega aquí el texto de la metodología")
+marco_texto = st.text_area("Pega aquí el texto del marco teórico")
 
-archivo_excel = st.file_uploader("Sube tu archivo de capítulos (.xlsx)", type=["xlsx"])
-objetivos = st.file_uploader("Sube el archivo de texto con los objetivos", type=["txt"])
-metodologia = st.file_uploader("Sube el archivo de texto con la metodología", type=["txt"])
-marco = st.file_uploader("Sube el archivo de texto con el marco teórico", type=["txt"])
+archivo_excel = st.file_uploader("Sube tu archivo Excel con la columna 'Capítulo o título'", type=["xlsx"])
 
-if archivo_excel and objetivos and metodologia and marco:
-    st.success("✅ Archivos cargados correctamente")
+if st.button("🚀 Ejecutar clasificación") and archivo_excel and objetivos_texto and metodologia_texto and marco_texto:
+    try:
+        df = pd.read_excel(archivo_excel)
 
-    # Leer textos base
-    objetivos_texto = objetivos.read().decode("utf-8")
-    metodologia_texto = metodologia.read().decode("utf-8")
-    marco_texto = marco.read().decode("utf-8")
+        if "Capítulo o título" not in df.columns:
+            st.error("El archivo debe tener una columna llamada exactamente: 'Capítulo o título'")
+        else:
+            titulos = df["Capítulo o título"].astype(str).tolist()
 
-    # Leer Excel
-    df = pd.read_excel(archivo_excel)
-    titulos = df["Capítulo o título"].astype(str).tolist()
+            modelo = SentenceTransformer("paraphrase-MiniLM-L6-v2")
+            embeddings = modelo.encode(titulos + [objetivos_texto, metodologia_texto, marco_texto], convert_to_tensor=True)
+            emb_titulos = embeddings[:len(titulos)]
+            emb_obj = embeddings[len(titulos)]
+            emb_met = embeddings[len(titulos)+1]
+            emb_mar = embeddings[len(titulos)+2]
 
-    # Cargar modelo
-    modelo = SentenceTransformer("paraphrase-MiniLM-L6-v2")
+            data = []
+            for i, titulo in enumerate(titulos):
+                sim_obj = float(util.cos_sim(emb_titulos[i], emb_obj))
+                sim_met = float(util.cos_sim(emb_titulos[i], emb_met))
+                sim_mar = float(util.cos_sim(emb_titulos[i], emb_mar))
 
-    # Obtener embeddings
-    embeddings = modelo.encode(titulos + [objetivos_texto, metodologia_texto, marco_texto], convert_to_tensor=True)
-    emb_titulos = embeddings[:len(titulos)]
-    emb_obj = embeddings[len(titulos)]
-    emb_met = embeddings[len(titulos)+1]
-    emb_mar = embeddings[len(titulos)+2]
+                relacion_objetivo = "Sí" if sim_obj > 0.45 else "No"
+                clave_metodologia = "Sí" if sim_met > 0.45 else "No"
+                aporta_marco = "Sí" if sim_mar > 0.45 else "No"
+                se_repite = "Sí" if titulo in titulos[:i] + titulos[i+1:] else "No"
+                puede_eliminarse = "Sí" if (sim_obj < 0.3 and sim_met < 0.3 and sim_mar < 0.3) else "No"
 
-    # Clasificación
-    data = []
-    for i, titulo in enumerate(titulos):
-        sim_obj = float(util.cos_sim(emb_titulos[i], emb_obj))
-        sim_met = float(util.cos_sim(emb_titulos[i], emb_met))
-        sim_mar = float(util.cos_sim(emb_titulos[i], emb_mar))
+                puntuacion = sum([relacion_objetivo, clave_metodologia, aporta_marco].count("Sí"))
+                categoria = "A" if puntuacion == 3 else "B" if puntuacion == 2 else "C" if puntuacion == 1 else "D" if se_repite == "Sí" else "E"
 
-        relacion_objetivo = "Sí" if sim_obj > 0.45 else "No"
-        clave_metodologia = "Sí" if sim_met > 0.45 else "No"
-        aporta_marco = "Sí" if sim_mar > 0.45 else "No"
-        se_repite = "Sí" if titulo in titulos[:i] + titulos[i+1:] else "No"
-        puede_eliminarse = "Sí" if (sim_obj < 0.3 and sim_met < 0.3 and sim_mar < 0.3) else "No"
+                data.append([
+                    categoria, relacion_objetivo, clave_metodologia,
+                    aporta_marco, se_repite, puede_eliminarse
+                ])
 
-        # Categoría A–E según cantidad de "Sí"
-        puntuacion = sum([relacion_objetivo, clave_metodologia, aporta_marco].count("Sí"))
-        categoria = "A" if puntuacion == 3 else "B" if puntuacion == 2 else "C" if puntuacion == 1 else "D" if se_repite == "Sí" else "E"
+            columnas = [
+                "Categoría final (A–E)",
+                "¿Relaciona un objetivo?",
+                "¿Es clave para entender metodología/resultados?",
+                "¿Aporta al marco teórico?",
+                "¿Se repite en otro capítulo?",
+                "¿Puede resumirse/eliminarse?"
+            ]
 
-        data.append([
-            categoria, relacion_objetivo, clave_metodologia,
-            aporta_marco, se_repite, puede_eliminarse
-        ])
+            df_resultado = pd.DataFrame(data, columns=columnas)
+            df_final = pd.concat([df["Capítulo o título"], df_resultado], axis=1)
 
-    columnas = [
-        "Categoría final (A–E)",
-        "¿Relaciona un objetivo?",
-        "¿Es clave para entender metodología/resultados?",
-        "¿Aporta al marco teórico?",
-        "¿Se repite en otro capítulo?",
-        "¿Puede resumirse/eliminarse?"
-    ]
+            salida = io.BytesIO()
+            with pd.ExcelWriter(salida, engine="openpyxl") as writer:
+                df_final.to_excel(writer, index=False, sheet_name="Clasificado")
+                ws = writer.book.active
+                verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                rojo = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 
-    df_resultado = pd.DataFrame(data, columns=columnas)
-    df_final = pd.concat([df["Capítulo o título"], df_resultado], axis=1)
+                for row in ws.iter_rows(min_row=2, min_col=2, max_col=6):
+                    for cell in row:
+                        if cell.value == "Sí":
+                            cell.fill = verde
+                        elif cell.value == "No":
+                            cell.fill = rojo
 
-    # Guardar resultado en Excel
-    archivo_salida = "resultado_clasificado.xlsx"
-    df_final.to_excel(archivo_salida, index=False)
+            st.success("🌟 Clasificación completada")
+            st.download_button(
+                "📅 Descargar archivo clasificado",
+                data=salida.getvalue(),
+                file_name="clasificacion_tesis.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
-    # Aplicar colores
-    wb = load_workbook(archivo_salida)
-    ws = wb.active
-    color_si = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # Verde
-    color_no = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # Rojo
+    except Exception as e:
+        st.error(f"Ocurrió un error: {e}")
 
-    for row in ws.iter_rows(min_row=2, min_col=2, max_col=6):
-        for cell in row:
-            if cell.value == "Sí":
-                cell.fill = color_si
-            elif cell.value == "No":
-                cell.fill = color_no
+# Imagen de marca personal al final
+st.markdown("---")
+st.image("logo_autora.png", caption="Desarrollado por María José Duarte Torres", use_container_width=True)
 
-    wb.save(archivo_salida)
-
-    # Descargar
-    with open(archivo_salida, "rb") as f:
-        st.download_button(
-            label="📥 Descargar archivo clasificado",
-            data=f,
-            file_name="clasificacion_tesis.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
